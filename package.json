@@ -1,13 +1,23 @@
 {
   "name": "olx-testing-project",
   "version": "1.0.0",
-  "description": "",
+  "description": "Playwright tests for OLX.ba — SE302 course project",
   "main": "index.js",
-  "scripts": {},
+  "scripts": {
+    "test": "playwright test",
+    "test:headed": "playwright test --headed",
+    "test:report": "playwright show-report",
+    "install:browsers": "npx playwright install",
+    "test:ci": "playwright test --reporter=list --reporter=html",
+    "collect:evidence": "powershell -File ./scripts/collect-evidence.ps1",
+    "report:pdf": "npx md-to-pdf report/SE302_CourseProject_Report.md -o reports/SE302_CourseProject_Report.pdf",
+    "package:zip": "powershell -File ./scripts/package-submission.ps1"
+  },
   "keywords": [],
   "author": "",
   "license": "ISC",
-  "type": "commonjs",
+  "type": "module",
+  "private": true,
   "devDependencies": {
     "@playwright/test": "^1.57.0",
     "@types/node": "^25.0.3"
