@@ -27,6 +27,13 @@ export class HeaderPage extends BasePage {
       .first();
   }
 
+  private createAdTrigger(): Locator {
+    return this.page
+      .getByRole('link', { name: /objavi|post|kreiraj|napravi|dodaj oglas|create ad/i })
+      .or(this.page.getByRole('button', { name: /objavi|post|kreiraj|napravi|dodaj oglas|create ad/i }))
+      .first();
+  }
+
   // Navigate using baseURL from config
   async open(path: string = '/'): Promise<void> {
     // Use BasePage.open to keep Cloudflare detection and other global checks
@@ -34,6 +41,21 @@ export class HeaderPage extends BasePage {
 
     // Ensure cookie/privacy dialogs are dismissed after navigation so they don't block interactions
     await this.acceptCookiesIfPresent();
+    
+    // Wait for page to be stable before proceeding
+    await this.waitForPageStable();
+  }
+
+  // Wait for page to be stable - header visible and no major layout shifts
+  private async waitForPageStable(): Promise<void> {
+    try {
+      // Wait for header to be visible (indicates page is loaded)
+      await this.headerRoot().waitFor({ state: 'visible', timeout: 10000 });
+      // Wait a bit more for any dynamic content
+      await this.page.waitForTimeout(300);
+    } catch (e) {
+      // Continue even if timeout - might still work
+    }
   }
 
   async expectHeaderVisible(): Promise<void> {
@@ -42,84 +64,151 @@ export class HeaderPage extends BasePage {
 
   // FIX: OLX cookie banner (Quantcast) blocks clicks
   async acceptCookiesIfPresent(): Promise<void> {
-    const frame = this.page.frameLocator(
-      'iframe[id^="qc-cmp2-ui"], iframe[src*="quantcast"]'
-    );
+    // Wait a bit for cookie banner to appear
+    await this.page.waitForTimeout(500);
 
-    const iframeAccept = frame
-      .getByRole('button', { name: /prihvat|accept|slažem|slazem|agree|ok/i })
-      .first();
+    // First, try to find and click cookie consent in iframe (most common)
+    try {
+      const frame = this.page.frameLocator(
+        'iframe[id^="qc-cmp2-ui"], iframe[src*="quantcast"], iframe[title*="cookie" i]'
+      );
 
-    if (await iframeAccept.isVisible({ timeout: 10000 }).catch(() => false)) {
-      await iframeAccept.click();
-      return;
+      const iframeAccept = frame
+        .getByRole('button', { name: /^(prihvat|accept|slažem se|slazem se|agree|ok|u redu)$/i })
+        .first();
+
+      if (await iframeAccept.isVisible({ timeout: 3000 }).catch(() => false)) {
+        await iframeAccept.click({ timeout: 5000 });
+        await this.page.waitForTimeout(500); // Wait for banner to disappear
+        return;
+      }
+    } catch (e) {
+      // Continue to next method
     }
 
-    const pageAccept = this.page
-      .getByRole('button', { name: /prihvat|accept|slažem|slazem|agree|ok/i })
-      .first();
+    // Try to find accept button directly on page (more specific selectors)
+    try {
+      // Look for buttons with specific IDs or classes related to cookie consent
+      const cookieButtons = [
+        '#qc-cmp2-ui button[class*="accept"]',
+        '#qc-cmp2-ui button[class*="agree"]',
+        '[id*="cookie"] button[class*="accept"]',
+        '[id*="consent"] button[class*="accept"]',
+        'button[aria-label*="prihvat" i]',
+        'button[aria-label*="accept" i]',
+      ];
 
-    if (await pageAccept.isVisible({ timeout: 10000 }).catch(() => false)) {
-      await pageAccept.click();
-      return;
-    }
-
-    const closeBtn = this.page
-      .locator(
-        '#qc-cmp2-container button[aria-label*="close" i], #qc-cmp2-container button[title*="close" i]'
-      )
-      .first();
-
-    if (await closeBtn.isVisible({ timeout: 10000 }).catch(() => false)) {
-      await closeBtn.click();
-    }
-
-    // Aggressive fallback: look for any visible text matching known accept phrases and force-click it.
-    const anyAccept = this.page.locator('text=/slažem se|prihvat|accept|agree|ok|u redu/i').first();
-    if (await anyAccept.isVisible({ timeout: 3000 }).catch(() => false)) {
-      await anyAccept.click({ force: true });
-      return;
-    }
-
-    // Final fallback: if a privacy/consent dialog is present but not interactable, remove it from DOM.
-    await this.page.evaluate(() => {
-      const textRegex = /poštujemo vašu privatnost|privacy|verify you are human|needs to review the security of your connection|ray id:/i;
-      const nodes = Array.from(document.querySelectorAll('body *'));
-      for (const n of nodes) {
-        const txt = n.textContent || '';
-        if (textRegex.test(txt)) {
-          let el = n;
-          while (el && el !== document.body) {
-            const tag = el.tagName && el.tagName.toLowerCase();
-            const role = el.getAttribute && el.getAttribute('role');
-            const id = el.id || '';
-            const cls = el.className || '';
-            if (
-              tag === 'dialog' ||
-              role === 'dialog' ||
-              id.toLowerCase().includes('qc') ||
-              cls.toString().toLowerCase().includes('consent') ||
-              cls.toString().toLowerCase().includes('privacy')
-            ) {
-              el.remove();
-              break;
-            }
-            el = el.parentElement;
-          }
+      for (const selector of cookieButtons) {
+        const btn = this.page.locator(selector).first();
+        if (await btn.isVisible({ timeout: 2000 }).catch(() => false)) {
+          await btn.click({ timeout: 5000 });
+          await this.page.waitForTimeout(500);
+          return;
         }
       }
-    });
-    // allow caller to proceed after removing nuisance elements
-    return;
+    } catch (e) {
+      // Continue to next method
+    }
+
+    // Try close button (X) for cookie banner
+    try {
+      const closeBtn = this.page
+        .locator(
+          '#qc-cmp2-container button[aria-label*="close" i], #qc-cmp2-container button[title*="close" i], button.qc-cmp2-close-icon'
+        )
+        .first();
+
+      if (await closeBtn.isVisible({ timeout: 2000 }).catch(() => false)) {
+        await closeBtn.click({ timeout: 5000 });
+        await this.page.waitForTimeout(500);
+        return;
+      }
+    } catch (e) {
+      // Continue
+    }
+
+    // Final fallback: remove cookie/privacy dialogs from DOM if they're blocking
+    try {
+      await this.page.evaluate(() => {
+        // Remove Quantcast cookie banner
+        const qcContainer = document.getElementById('qc-cmp2-container');
+        if (qcContainer) {
+          qcContainer.remove();
+        }
+        
+        // Remove any iframes related to cookie consent
+        const iframes = document.querySelectorAll('iframe[id*="qc"], iframe[src*="quantcast"], iframe[title*="cookie" i]');
+        iframes.forEach(iframe => {
+          const container = iframe.closest('[id*="qc"], [class*="cookie"], [class*="consent"]');
+          if (container) {
+            container.remove();
+          }
+        });
+      });
+      await this.page.waitForTimeout(300);
+    } catch (e) {
+      // Continue anyway
+    }
   }
 
   async openLogin(): Promise<void> {
     await this.acceptCookiesIfPresent();
-    await this.loginTrigger().click({ timeout: 15000 });
+    
+    // Wait for login trigger to be ready
+    const loginLink = this.loginTrigger();
+    await loginLink.waitFor({ state: 'visible', timeout: 10000 });
+    await this.page.waitForTimeout(200); // Small wait for stability
+    
+    // Click and wait for navigation or form
+    await Promise.all([
+      this.page.waitForURL(/\/login/, { timeout: 15000 }).catch(() => {
+        // If URL doesn't change, wait for login form to appear instead
+        return this.page.waitForSelector('input[type="email"], input[name*="email" i], input[placeholder*="email" i], input[type="text"][name*="email" i]', { timeout: 15000 }).catch(() => {});
+      }),
+      loginLink.click({ timeout: 15000 })
+    ]);
+    
+    // Wait for page to stabilize after navigation
+    await this.page.waitForTimeout(500);
+    await this.acceptCookiesIfPresent(); // Accept cookies again if they appeared
   }
 
   async openRegister(): Promise<void> {
     await this.acceptCookiesIfPresent();
-    await this.registerTrigger().click({ timeout: 15000 });
+    
+    // Wait for register trigger to be ready
+    const registerLink = this.registerTrigger();
+    await registerLink.waitFor({ state: 'visible', timeout: 10000 });
+    await this.page.waitForTimeout(200); // Small wait for stability
+    
+    // Click and wait for navigation or form
+    await Promise.all([
+      this.page.waitForURL(/\/registr|register|signup|sign-up/i, { timeout: 15000 }).catch(() => {
+        // If URL doesn't change, wait for register form to appear instead
+        return this.page.waitForSelector('input[type="text"], input[name*="name" i], input[placeholder*="ime" i]', { timeout: 15000 }).catch(() => {});
+      }),
+      registerLink.click({ timeout: 15000 })
+    ]);
+    
+    // Wait for page to stabilize after navigation
+    await this.page.waitForTimeout(500);
+    await this.acceptCookiesIfPresent(); // Accept cookies again if they appeared
+  }
+
+  async openCreateAd(): Promise<void> {
+    await this.acceptCookiesIfPresent();
+    // Try to click create ad button/link if available
+    const createAdTrigger = this.createAdTrigger();
+    if (await createAdTrigger.isVisible({ timeout: 5000 }).catch(() => false)) {
+      await Promise.all([
+        this.page.waitForURL(/\/objavi|\/post|\/create|\/new/i, { timeout: 15000 }).catch(() => {}),
+        createAdTrigger.click({ timeout: 15000 })
+      ]);
+      // Wait a bit for page to load
+      await this.page.waitForTimeout(1000);
+      return;
+    }
+    // Fallback: navigate directly to /objavi
+    await this.open('/objavi');
   }
 }

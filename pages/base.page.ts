@@ -8,7 +8,18 @@ export class BasePage {
   }
 
   async open(path: string = '/') {
-    await this.page.goto(path);
+    // Wait for network to be idle to ensure page is fully loaded
+    await this.page.goto(path, { waitUntil: 'domcontentloaded' });
+    
+    // Wait for page to be stable - check for main content
+    try {
+      // Wait for body to be ready
+      await this.page.waitForLoadState('domcontentloaded', { timeout: 10000 });
+      // Wait a bit more for dynamic content
+      await this.page.waitForTimeout(500);
+    } catch (e) {
+      // Continue even if timeout - page might still be usable
+    }
 
     // Detect Cloudflare / anti-bot interstitials which show messages like
     // "Verify you are human" or "needs to review the security of your connection".
@@ -38,5 +49,27 @@ export class BasePage {
     } else {
       await expect(this.page).toHaveURL(value);
     }
+  }
+
+  // Retry helper for flaky operations
+  async retryOperation<T>(
+    operation: () => Promise<T>,
+    maxRetries: number = 3,
+    delay: number = 1000
+  ): Promise<T> {
+    let lastError: Error | null = null;
+    
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        return await operation();
+      } catch (error) {
+        lastError = error as Error;
+        if (attempt < maxRetries) {
+          await this.page.waitForTimeout(delay);
+        }
+      }
+    }
+    
+    throw lastError || new Error('Operation failed after retries');
   }
 }

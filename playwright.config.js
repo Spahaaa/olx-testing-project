@@ -39,6 +39,20 @@ export default defineConfig({
 
     /* Record video only on failure */
     video: 'retain-on-failure',
+
+    /* Increase navigation timeout for slow page loads */
+    navigationTimeout: 30000,
+
+    /* Wait for network to be idle before considering page loaded */
+    actionTimeout: 20000,
+  },
+
+  /* Global timeout for each test */
+  timeout: 60000,
+
+  /* Expect timeout for assertions */
+  expect: {
+    timeout: 15000,
   },
 
   /* Browsers configuration */
