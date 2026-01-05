@@ -8,6 +8,5 @@ test.describe('@functional Header - Links and navigation', () => {
     await header.open('/');
     await header.expectHeaderVisible();
 
-    // Additional checks for specific header links should be implemented in HeaderPage
   });
 });

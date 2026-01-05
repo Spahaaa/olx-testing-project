@@ -10,7 +10,6 @@ test.describe('@functional Search - Basic functionality', () => {
     await header.open('/');
     await header.expectHeaderVisible();
 
-    // Just verify search input exists and is visible
     const searchInput = page.getByRole('searchbox').first();
     await searchInput.waitFor({ state: 'visible', timeout: 10000 });
   });
@@ -25,7 +24,6 @@ test.describe('@functional Search - Basic functionality', () => {
     const searchInput = page.getByRole('searchbox').first();
     await searchInput.fill('test query');
     
-    // Verify text was entered
     const value = await searchInput.inputValue();
     expect(value).toBe('test query');
   });

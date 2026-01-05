@@ -8,7 +8,6 @@ test.describe('@smoke Navigation - Basic smoke tests', () => {
     await header.open('/');
     await header.expectHeaderVisible();
     
-    // Basic smoke test - just verify page loaded
     const url = page.url();
     expect(url).toContain('olx.ba');
   });
@@ -19,7 +18,6 @@ test.describe('@smoke Navigation - Basic smoke tests', () => {
     await header.open('/');
     await header.expectHeaderVisible();
     
-    // Verify header banner exists
     const banner = page.getByRole('banner').first();
     await banner.waitFor({ state: 'visible', timeout: 10000 });
   });

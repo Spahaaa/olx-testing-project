@@ -38,38 +38,30 @@ export class RegisterPage extends BasePage {
   }
 
   async expectRegisterVisible(): Promise<void> {
-    // Wait for page to stabilize
+
     await this.page.waitForTimeout(500);
     
-    // Try to find register heading first
     const registerRoot = this.registerRoot();
     const isVisible = await registerRoot.isVisible({ timeout: 5000 }).catch(() => false);
     
     if (isVisible) {
-      // Heading is visible, that's good
       await expect(registerRoot).toBeVisible({ timeout: 10000 });
       return;
     }
     
-    // If heading not found, check if register form inputs are visible instead
-    // This handles cases where register form appears without a heading
     const nameInput = this.nameInput();
     const emailInput = this.emailInput();
     const passwordInput = this.passwordInput();
     
-    // Wait for inputs with retries
     try {
       await nameInput.waitFor({ state: 'visible', timeout: 5000 });
       await emailInput.waitFor({ state: 'visible', timeout: 5000 });
       await passwordInput.waitFor({ state: 'visible', timeout: 5000 });
       
-      // All inputs visible, that's good enough
       return;
     } catch {
-      // Continue to final check
     }
-    
-    // Final check: expect the heading to be visible (will fail with clear error if not)
+  
     await expect(registerRoot).toBeVisible({ timeout: 15000 });
   }
 
@@ -86,7 +78,6 @@ export class RegisterPage extends BasePage {
   }
 
   async submit(): Promise<void> {
-    // reuse cookie accept from header/auth if blocking
     await this.page.waitForTimeout(200);
     await this.submitButton().click({ timeout: 15000 });
   }

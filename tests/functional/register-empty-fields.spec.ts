@@ -11,7 +11,7 @@ test.describe('@functional Register - Empty fields', () => {
     await header.openRegister();
 
     await register.expectRegisterVisible();
-    // Submit with empty fields
+
     await register.submit();
 
     await register.expectValidationVisible();

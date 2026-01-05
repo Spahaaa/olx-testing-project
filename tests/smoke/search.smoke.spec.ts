@@ -10,7 +10,6 @@ test.describe('@smoke Search - Basic search', () => {
     await header.open('/');
     await header.expectHeaderVisible();
 
-    // Attempt a lightweight search flow via SearchPage
     await search.search('test');
     await search.expectResultsVisible();
   });
