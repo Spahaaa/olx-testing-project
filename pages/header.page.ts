@@ -141,9 +141,7 @@ export class HeaderPage extends BasePage {
     await loginLink.waitFor({ state: 'visible', timeout: 10000 });
     await this.page.waitForTimeout(200); 
     
-    // Wait for navigation or form to appear
     const navigationPromise = this.page.waitForURL(/\/login/, { timeout: 15000 }).catch(() => {
-      // If URL doesn't change, wait for login form inputs instead
       return this.page.waitForSelector('input[type="email"], input[name*="email" i], input[placeholder*="email" i], input[type="text"][name*="email" i]', { timeout: 15000 }).catch(() => {});
     });
     
@@ -152,12 +150,10 @@ export class HeaderPage extends BasePage {
       loginLink.click({ timeout: 15000 })
     ]);
     
-    // Wait for page to stabilize
     await this.page.waitForTimeout(500);
     try {
       await this.page.waitForLoadState('domcontentloaded', { timeout: 5000 });
     } catch {
-      // Continue if already loaded
     }
     await this.acceptCookiesIfPresent(); 
   }
@@ -169,9 +165,7 @@ export class HeaderPage extends BasePage {
     await registerLink.waitFor({ state: 'visible', timeout: 10000 });
     await this.page.waitForTimeout(200); 
     
-    // Wait for navigation or form to appear
     const navigationPromise = this.page.waitForURL(/\/registr|register|signup|sign-up/i, { timeout: 15000 }).catch(() => {
-      // If URL doesn't change, wait for register form inputs instead
       return this.page.waitForSelector('input[type="text"], input[name*="name" i], input[placeholder*="ime" i]', { timeout: 15000 }).catch(() => {});
     });
     
@@ -180,12 +174,10 @@ export class HeaderPage extends BasePage {
       registerLink.click({ timeout: 15000 })
     ]);
     
-    // Wait for page to stabilize
     await this.page.waitForTimeout(500);
     try {
       await this.page.waitForLoadState('domcontentloaded', { timeout: 5000 });
     } catch {
-      // Continue if already loaded
     }
     await this.acceptCookiesIfPresent(); 
   }

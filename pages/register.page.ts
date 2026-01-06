@@ -41,7 +41,6 @@ export class RegisterPage extends BasePage {
 
     await this.page.waitForTimeout(500);
     
-    // Try multiple ways to detect register page
     const registerRoot = this.registerRoot();
     const isRootVisible = await registerRoot.isVisible({ timeout: 3000 }).catch(() => false);
     
@@ -50,7 +49,6 @@ export class RegisterPage extends BasePage {
       return;
     }
     
-    // Try to find form inputs as fallback
     const nameInput = this.nameInput();
     const emailInput = this.emailInput();
     const passwordInput = this.passwordInput();
@@ -60,7 +58,6 @@ export class RegisterPage extends BasePage {
       await emailInput.waitFor({ state: 'visible', timeout: 8000 });
       await passwordInput.waitFor({ state: 'visible', timeout: 8000 });
       
-      // Verify at least one is visible
       const nameVisible = await nameInput.isVisible().catch(() => false);
       const emailVisible = await emailInput.isVisible().catch(() => false);
       const passVisible = await passwordInput.isVisible().catch(() => false);
@@ -69,10 +66,8 @@ export class RegisterPage extends BasePage {
         return;
       }
     } catch {
-      // Continue to try other methods
     }
     
-    // Try alternative input selectors
     try {
       const altNameInput = this.page.locator('input[type="text"][name*="name" i], input[placeholder*="ime" i]').first();
       const altEmailInput = this.page.locator('input[type="email"], input[name*="email" i]').first();
@@ -83,10 +78,8 @@ export class RegisterPage extends BasePage {
       await altPassInput.waitFor({ state: 'visible', timeout: 5000 });
       return;
     } catch {
-      // Continue to final check
     }
   
-    // Final attempt with heading
     await expect(registerRoot).toBeVisible({ timeout: 15000 });
   }
 

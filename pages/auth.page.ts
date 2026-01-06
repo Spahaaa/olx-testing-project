@@ -28,7 +28,6 @@ export class AuthPage extends BasePage {
         return primary;
       }
     } catch {
-      // Fall through to fallback
     }
     return this.page.locator('input[type="email"], input[name*="email" i], input[type="text"][name*="email" i]').first();
   }
@@ -41,7 +40,6 @@ export class AuthPage extends BasePage {
         return primary;
       }
     } catch {
-      // Fall through to fallback
     }
     return this.page.locator('input[type="password"], input[name*="password" i], input[name*="pass" i], input[name*="šifra" i], input[name*="sifra" i]').first();
   }
@@ -135,28 +133,23 @@ export class AuthPage extends BasePage {
    
     await this.page.waitForTimeout(500);
     
-    // Wait for page to be ready
     try {
       await this.page.waitForLoadState('domcontentloaded', { timeout: 10000 });
     } catch {
-      // Continue if timeout - page might already be loaded
     }
     
     try {
       await expect(this.page).toHaveURL(/\/login/, { timeout: 5000 });
     } catch {
-      // URL might not change if it's a modal
     }
 
     let emailInput = this.emailInput();
     try {
       await emailInput.waitFor({ state: 'visible', timeout: 10000 });
     } catch (error) {
-      // If page was closed, rethrow the error
       if (error instanceof Error && error.message.includes('closed')) {
         throw error;
       }
-      // Fallback to alternative selector
       emailInput = this.page.locator('input[type="email"], input[name*="email" i], input[type="text"][name*="email" i]').first();
       await emailInput.waitFor({ state: 'visible', timeout: 10000 });
     }
@@ -165,11 +158,9 @@ export class AuthPage extends BasePage {
     try {
       await passwordInput.waitFor({ state: 'visible', timeout: 10000 });
     } catch (error) {
-      // If page was closed, rethrow the error
       if (error instanceof Error && error.message.includes('closed')) {
         throw error;
       }
-      // Fallback to alternative selector
       passwordInput = this.page.locator('input[type="password"], input[name*="password" i], input[name*="pass" i], input[name*="šifra" i], input[name*="sifra" i]').first();
       await passwordInput.waitFor({ state: 'visible', timeout: 10000 });
     }
