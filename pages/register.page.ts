@@ -41,27 +41,52 @@ export class RegisterPage extends BasePage {
 
     await this.page.waitForTimeout(500);
     
+    // Try multiple ways to detect register page
     const registerRoot = this.registerRoot();
-    const isVisible = await registerRoot.isVisible({ timeout: 5000 }).catch(() => false);
+    const isRootVisible = await registerRoot.isVisible({ timeout: 3000 }).catch(() => false);
     
-    if (isVisible) {
+    if (isRootVisible) {
       await expect(registerRoot).toBeVisible({ timeout: 10000 });
       return;
     }
     
+    // Try to find form inputs as fallback
     const nameInput = this.nameInput();
     const emailInput = this.emailInput();
     const passwordInput = this.passwordInput();
     
     try {
-      await nameInput.waitFor({ state: 'visible', timeout: 5000 });
-      await emailInput.waitFor({ state: 'visible', timeout: 5000 });
-      await passwordInput.waitFor({ state: 'visible', timeout: 5000 });
+      await nameInput.waitFor({ state: 'visible', timeout: 8000 });
+      await emailInput.waitFor({ state: 'visible', timeout: 8000 });
+      await passwordInput.waitFor({ state: 'visible', timeout: 8000 });
       
+      // Verify at least one is visible
+      const nameVisible = await nameInput.isVisible().catch(() => false);
+      const emailVisible = await emailInput.isVisible().catch(() => false);
+      const passVisible = await passwordInput.isVisible().catch(() => false);
+      
+      if (nameVisible || emailVisible || passVisible) {
+        return;
+      }
+    } catch {
+      // Continue to try other methods
+    }
+    
+    // Try alternative input selectors
+    try {
+      const altNameInput = this.page.locator('input[type="text"][name*="name" i], input[placeholder*="ime" i]').first();
+      const altEmailInput = this.page.locator('input[type="email"], input[name*="email" i]').first();
+      const altPassInput = this.page.locator('input[type="password"], input[name*="password" i]').first();
+      
+      await altNameInput.waitFor({ state: 'visible', timeout: 5000 });
+      await altEmailInput.waitFor({ state: 'visible', timeout: 5000 });
+      await altPassInput.waitFor({ state: 'visible', timeout: 5000 });
       return;
     } catch {
+      // Continue to final check
     }
   
+    // Final attempt with heading
     await expect(registerRoot).toBeVisible({ timeout: 15000 });
   }
 

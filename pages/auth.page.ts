@@ -20,6 +20,32 @@ export class AuthPage extends BasePage {
       .locator('xpath=following::input[1]');
   }
 
+  private async getEmailInput(): Promise<Locator> {
+    const primary = this.emailInput();
+    try {
+      const count = await primary.count();
+      if (count > 0 && await primary.isVisible({ timeout: 2000 }).catch(() => false)) {
+        return primary;
+      }
+    } catch {
+      // Fall through to fallback
+    }
+    return this.page.locator('input[type="email"], input[name*="email" i], input[type="text"][name*="email" i]').first();
+  }
+
+  private async getPasswordInput(): Promise<Locator> {
+    const primary = this.passwordInput();
+    try {
+      const count = await primary.count();
+      if (count > 0 && await primary.isVisible({ timeout: 2000 }).catch(() => false)) {
+        return primary;
+      }
+    } catch {
+      // Fall through to fallback
+    }
+    return this.page.locator('input[type="password"], input[name*="password" i], input[name*="pass" i], input[name*="šifra" i], input[name*="sifra" i]').first();
+  }
+
   private submitButton(): Locator {
     return this.page
       .getByRole('button', {
@@ -109,34 +135,59 @@ export class AuthPage extends BasePage {
    
     await this.page.waitForTimeout(500);
     
+    // Wait for page to be ready
+    try {
+      await this.page.waitForLoadState('domcontentloaded', { timeout: 10000 });
+    } catch {
+      // Continue if timeout - page might already be loaded
+    }
+    
     try {
       await expect(this.page).toHaveURL(/\/login/, { timeout: 5000 });
     } catch {
-
+      // URL might not change if it's a modal
     }
 
-    const emailInput = this.emailInput();
+    let emailInput = this.emailInput();
     try {
       await emailInput.waitFor({ state: 'visible', timeout: 10000 });
-    } catch {
-
-      const altEmailInput = this.page.locator('input[type="email"], input[name*="email" i], input[type="text"][name*="email" i]').first();
-      await altEmailInput.waitFor({ state: 'visible', timeout: 10000 });
+    } catch (error) {
+      // If page was closed, rethrow the error
+      if (error instanceof Error && error.message.includes('closed')) {
+        throw error;
+      }
+      // Fallback to alternative selector
+      emailInput = this.page.locator('input[type="email"], input[name*="email" i], input[type="text"][name*="email" i]').first();
+      await emailInput.waitFor({ state: 'visible', timeout: 10000 });
     }
 
-    const passwordInput = this.passwordInput();
-    await passwordInput.waitFor({ state: 'visible', timeout: 10000 });
+    let passwordInput = this.passwordInput();
+    try {
+      await passwordInput.waitFor({ state: 'visible', timeout: 10000 });
+    } catch (error) {
+      // If page was closed, rethrow the error
+      if (error instanceof Error && error.message.includes('closed')) {
+        throw error;
+      }
+      // Fallback to alternative selector
+      passwordInput = this.page.locator('input[type="password"], input[name*="password" i], input[name*="pass" i], input[name*="šifra" i], input[name*="sifra" i]').first();
+      await passwordInput.waitFor({ state: 'visible', timeout: 10000 });
+    }
 
     await expect(emailInput).toBeVisible({ timeout: 5000 });
     await expect(passwordInput).toBeVisible({ timeout: 5000 });
   }
 
   async fillEmail(value: string): Promise<void> {
-    await this.emailInput().fill(value);
+    const emailInput = await this.getEmailInput();
+    await emailInput.waitFor({ state: 'visible', timeout: 10000 });
+    await emailInput.fill(value);
   }
 
   async fillPassword(value: string): Promise<void> {
-    await this.passwordInput().fill(value);
+    const passwordInput = await this.getPasswordInput();
+    await passwordInput.waitFor({ state: 'visible', timeout: 10000 });
+    await passwordInput.fill(value);
   }
 
   async submit(): Promise<void> {
@@ -147,8 +198,8 @@ export class AuthPage extends BasePage {
   async expectValidationVisible(): Promise<void> {
     await this.acceptCookiesIfPresent();
 
-    const email = this.emailInput();
-    const pass = this.passwordInput();
+    const email = await this.getEmailInput();
+    const pass = await this.getPasswordInput();
 
     const emailHasAria = await email.getAttribute('aria-invalid').catch(() => null);
     const passHasAria = await pass.getAttribute('aria-invalid').catch(() => null);

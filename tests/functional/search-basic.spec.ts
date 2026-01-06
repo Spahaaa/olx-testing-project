@@ -22,8 +22,21 @@ test.describe('@functional Search - Basic functionality', () => {
     await header.expectHeaderVisible();
 
     const searchInput = page.getByRole('searchbox').first();
-    await searchInput.fill('test query');
+    await searchInput.waitFor({ state: 'visible', timeout: 10000 });
     
+    // Ensure input is focused and ready
+    await searchInput.click();
+    await page.waitForTimeout(200);
+    
+    // Clear any existing value first
+    await searchInput.clear();
+    await page.waitForTimeout(100);
+    
+    // Fill the input
+    await searchInput.fill('test query');
+    await page.waitForTimeout(300);
+    
+    // Verify the value
     const value = await searchInput.inputValue();
     expect(value).toBe('test query');
   });
